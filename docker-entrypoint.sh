@@ -70,6 +70,37 @@ if [ ! -s /etc/ocserv/ocpasswd ]; then
 	exit 1
 fi
 
+# Parse a boolean environment variable: is_enabled NAME DEFAULT
+is_enabled() {
+	eval "val=\${$1:-$2}"
+	case "$(printf '%s' "$val" | tr 'A-Z' 'a-z')" in
+		1|true|yes|on) return 0 ;;
+		0|false|no|off) return 1 ;;
+		*)
+			echo "Error: $1 must be true or false, got '$val'" >&2
+			exit 1
+			;;
+	esac
+}
+
+# DTLS (UDP transport); disabled means TCP/TLS only
+if is_enabled DTLS true; then
+	sed -i 's/^#\{0,1\}udp-port = .*/udp-port = 443/' /etc/ocserv/ocserv.conf
+	echo "DTLS enabled"
+else
+	sed -i 's/^udp-port = /#udp-port = /' /etc/ocserv/ocserv.conf
+	echo "DTLS disabled"
+fi
+
+# Compression (LZS / LZ4)
+if is_enabled COMPRESSION true; then
+	sed -i 's/^#\{0,1\}compression = .*/compression = true/' /etc/ocserv/ocserv.conf
+	echo "Compression enabled"
+else
+	sed -i 's/^#\{0,1\}compression = .*/compression = false/' /etc/ocserv/ocserv.conf
+	echo "Compression disabled"
+fi
+
 # Configure camouflage (server looks like a plain web server without the secret)
 if [ -n "$CAMOUFLAGE_SECRET" ]; then
 	case "$CAMOUFLAGE_SECRET" in

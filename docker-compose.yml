@@ -20,5 +20,7 @@ services:
       - SRV_DAYS=9999
       - VPN_USER=alice
       - VPN_PASSWORD=changeme
+      - DTLS=true
+      - COMPRESSION=true
       # Optional: uncomment to hide the VPN behind https://<server>/?mysecret
       # - CAMOUFLAGE_SECRET=mysecret

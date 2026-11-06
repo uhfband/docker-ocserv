@@ -56,6 +56,10 @@ Apart from the VPN user (see `VPN_USER` / `VPN_PASSWORD` below, or mount an `ocp
 
 `CAMOUFLAGE_REALM`, the HTTP auth realm shown to clients without the secret (only used when `CAMOUFLAGE_SECRET` is set).
 
+`DTLS`, `true` or `false`. When `false`, the UDP (DTLS) channel is turned off and clients use TCP/TLS only; you then don't need to publish `443/udp`.
+
+`COMPRESSION`, `true` or `false`. Enables or disables LZS/LZ4 compression negotiation.
+
 The default values of the above environment variables:
 
 |   Variable   |     Default     |
@@ -68,6 +72,8 @@ The default values of the above environment variables:
 | **SRV_DAYS** |       9999      |
 | **VPN_USER** |      (none)     |
 | **VPN_PASSWORD** |  (none)     |
+|   **DTLS**   |       true      |
+| **COMPRESSION** |    true      |
 | **CAMOUFLAGE_SECRET** | (none, camouflage disabled) |
 | **CAMOUFLAGE_REALM** | Restricted Content |
 
