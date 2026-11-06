@@ -6,12 +6,6 @@ docker-ocserv is an OpenConnect VPN Server boxed in a Docker image built by [Tom
 
 Update to version 0.11.8 and use Alpine 3.6 as base image
 
-## Update on July 20,2016
-
-You can login with two group (`Route`/`ALL`) from now on.
-`Route` group means you can access China Mainland website directly and other connection will be protected by OpenConnect VPN
-`All` group means all of connection will be protected by OpenConnect VPN 
-
 ## Update on July 16, 2016
 
 Thanks for [@sempr](https://github.com/sempr)'s contribution and suggestion, from now on, the [Alpine Linux](https://hub.docker.com/_/alpine/) will be used as the base image. The docker image size has been dramatically reduced from around 150MB to only 20MB.
@@ -35,14 +29,14 @@ docker pull tommylau/ocserv
 Start an ocserv instance:
 
 ```bash
-docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -d tommylau/ocserv
+docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e VPN_USER=alice -e VPN_PASSWORD=changeme -d tommylau/ocserv
 ```
 
-This will start an instance with the a test user named `test` and password is also `test`.
+This will start an instance with a user named `alice` and password `changeme`. No default user is created: you must either set `VPN_USER`/`VPN_PASSWORD` or mount your own `ocpasswd` file, otherwise the container exits with an error.
 
 ### Environment Variables
 
-All the variables to this image is optional, which means you don't have to type in any environment variables, and you can have a OpenConnect Server out of the box! However, if you like to config the ocserv the way you like it, here's what you wanna know.
+Apart from the VPN user (see `VPN_USER` / `VPN_PASSWORD` below, or mount an `ocpasswd` file), all variables are optional.
 
 `CA_CN`, this is the common name used to generate the CA(Certificate Authority).
 
@@ -56,7 +50,11 @@ All the variables to this image is optional, which means you don't have to type 
 
 `SRV_DAYS`, this is the expiration days used to generate the server certification.
 
-`NO_TEST_USER`, while this variable is set to not empty, the `test` user will not be created. You have to create your own user with password. The default value is to create `test` user with password `test`.
+`VPN_USER` and `VPN_PASSWORD`, the username and password of a VPN user. Both must be set together. The user is created (or its password updated) in `/etc/ocserv/ocpasswd` on every container start; other users in the file are left untouched.
+
+`CAMOUFLAGE_SECRET`, when set, enables ocserv's camouflage mode: the server answers like an ordinary password-protected web server unless the client puts the secret in the URL, e.g. `https://my.test.com/?mysecret`. It may contain only letters, digits and `. _ ~ -`. When not set, camouflage is disabled.
+
+`CAMOUFLAGE_REALM`, the HTTP auth realm shown to clients without the secret (only used when `CAMOUFLAGE_SECRET` is set).
 
 The default values of the above environment variables:
 
@@ -68,40 +66,50 @@ The default values of the above environment variables:
 |  **SRV_CN**  | www.example.com |
 | **SRV_ORG**  |    My Company   |
 | **SRV_DAYS** |       9999      |
+| **VPN_USER** |      (none)     |
+| **VPN_PASSWORD** |  (none)     |
+| **CAMOUFLAGE_SECRET** | (none, camouflage disabled) |
+| **CAMOUFLAGE_REALM** | Restricted Content |
 
 ### Running examples
 
-Start an instance out of the box with username `test` and password `test`
+Start an instance with username `alice` and password `changeme`
 
 ```bash
-docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -d tommylau/ocserv
+docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e VPN_USER=alice -e VPN_PASSWORD=changeme -d tommylau/ocserv
+```
+
+Start an instance with camouflage enabled; clients must connect to `https://<server>/?mysecret`
+
+```bash
+docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e VPN_USER=alice -e VPN_PASSWORD=changeme -e CAMOUFLAGE_SECRET=mysecret -d tommylau/ocserv
 ```
 
 Start an instance with server name `my.test.com`, `My Test` and `365` days
 
 ```bash
-docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e SRV_CN=my.test.com -e SRV_ORG="My Test" -e SRV_DAYS=365 -d tommylau/ocserv
+docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e SRV_CN=my.test.com -e SRV_ORG="My Test" -e SRV_DAYS=365 -e VPN_USER=alice -e VPN_PASSWORD=changeme -d tommylau/ocserv
 ```
 
 Start an instance with CA name `My CA`, `My Corp` and `3650` days
 
 ```bash
-docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e CA_CN="My CA" -e CA_ORG="My Corp" -e CA_DAYS=3650 -d tommylau/ocserv
+docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e CA_CN="My CA" -e CA_ORG="My Corp" -e CA_DAYS=3650 -e VPN_USER=alice -e VPN_PASSWORD=changeme -d tommylau/ocserv
 ```
 
 A totally customized instance with both CA and server certification
 
 ```bash
-docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e CA_CN="My CA" -e CA_ORG="My Corp" -e CA_DAYS=3650 -e SRV_CN=my.test.com -e SRV_ORG="My Test" -e SRV_DAYS=365 -d tommylau/ocserv
+docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e CA_CN="My CA" -e CA_ORG="My Corp" -e CA_DAYS=3650 -e SRV_CN=my.test.com -e SRV_ORG="My Test" -e SRV_DAYS=365 -e VPN_USER=alice -e VPN_PASSWORD=changeme -d tommylau/ocserv
 ```
 
-Start an instance as above but without test user
+Start an instance as above but with your own `ocpasswd` file instead of `VPN_USER`/`VPN_PASSWORD`
 
 ```bash
-docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e CA_CN="My CA" -e CA_ORG="My Corp" -e CA_DAYS=3650 -e SRV_CN=my.test.com -e SRV_ORG="My Test" -e SRV_DAYS=365 -e NO_TEST_USER=1 -v /some/path/to/ocpasswd:/etc/ocserv/ocpasswd -d tommylau/ocserv
+docker run --name ocserv --privileged -p 443:443 -p 443:443/udp -e CA_CN="My CA" -e CA_ORG="My Corp" -e CA_DAYS=3650 -e SRV_CN=my.test.com -e SRV_ORG="My Test" -e SRV_DAYS=365 -v /some/path/to/ocpasswd:/etc/ocserv/ocpasswd -d tommylau/ocserv
 ```
 
-**WARNING:** The ocserv requires the ocpasswd file to start, if `NO_TEST_USER=1` is provided, there will be no ocpasswd created, which will stop the container immediately after start it. You must specific a ocpasswd file pointed to `/etc/ocserv/ocpasswd` by using the volume argument `-v` by docker as demonstrated above.
+**WARNING:** ocserv needs at least one user to start. If neither `VPN_USER`/`VPN_PASSWORD` nor a non-empty `/etc/ocserv/ocpasswd` is provided, the container exits immediately with an error.
 
 ### User operations
 
@@ -112,24 +120,22 @@ All the users opertaions happened while the container is running. If you used a 
 If say, you want to create a user named `tommy`, type the following command
 
 ```bash
-docker exec -ti ocserv ocpasswd -c /etc/ocserv/ocpasswd -g "Route,All" tommy
+docker exec -ti ocserv ocpasswd -c /etc/ocserv/ocpasswd tommy
 Enter password:
 Re-enter password:
 ```
 
 When prompt for password, type the password twice, then you will have the user with the password you want.
 
->`-g "Route,ALL"` means add user `tommy` to group `Route` and group `All`
-
 #### Delete user
 
 Delete user is similar to add user, just add another argument `-d` to the command line
 
 ```bash
-docker exec -ti ocserv ocpasswd -c /etc/ocserv/ocpasswd -d test
+docker exec -ti ocserv ocpasswd -c /etc/ocserv/ocpasswd -d tommy
 ```
 
-The above command will delete the default user `test`, if you start the instance without using environment variable `NO_TEST_USER`.
+The above command will delete the user `tommy`. Note that the user given in `VPN_USER` is re-created on the next container start as long as the variable is set.
 
 #### Change password
 

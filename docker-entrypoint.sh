@@ -51,12 +51,44 @@ if [ ! -f /etc/ocserv/certs/server-key.pem ] || [ ! -f /etc/ocserv/certs/server-
 	tls_www_server
 	EOSRV
 	certtool --generate-certificate --load-privkey server-key.pem --load-ca-certificate ca.pem --load-ca-privkey ca-key.pem --template server.tmpl --outfile server-cert.pem
+fi
 
-	# Create a test user
-	if [ -z "$NO_TEST_USER" ] && [ ! -f /etc/ocserv/ocpasswd ]; then
-		echo "Create test user 'test' with password 'test'"
-		echo 'test:Route,All:$5$DktJBFKobxCFd7wN$sn.bVw8ytyAaNamO.CvgBvkzDiFR6DaHdUzcif52KK7' > /etc/ocserv/ocpasswd
+# Create or update the VPN user from environment variables
+if [ -n "$VPN_USER" ] || [ -n "$VPN_PASSWORD" ]; then
+	if [ -z "$VPN_USER" ] || [ -z "$VPN_PASSWORD" ]; then
+		echo "Error: VPN_USER and VPN_PASSWORD must be set together" >&2
+		exit 1
 	fi
+	printf '%s\n%s\n' "$VPN_PASSWORD" "$VPN_PASSWORD" \
+		| ocpasswd -c /etc/ocserv/ocpasswd "$VPN_USER" \
+		|| exit 1
+	echo "VPN user '$VPN_USER' configured"
+fi
+
+if [ ! -s /etc/ocserv/ocpasswd ]; then
+	echo "Error: no VPN users found. Set VPN_USER and VPN_PASSWORD, or mount an ocpasswd file at /etc/ocserv/ocpasswd" >&2
+	exit 1
+fi
+
+# Configure camouflage (server looks like a plain web server without the secret)
+if [ -n "$CAMOUFLAGE_SECRET" ]; then
+	case "$CAMOUFLAGE_SECRET" in
+		*[!A-Za-z0-9._~-]*)
+			echo "Error: CAMOUFLAGE_SECRET may only contain letters, digits and . _ ~ -" >&2
+			exit 1
+			;;
+	esac
+	sed -i \
+		-e 's/^#\{0,1\}camouflage = .*/camouflage = true/' \
+		-e "s/^#\{0,1\}camouflage_secret = .*/camouflage_secret = \"$CAMOUFLAGE_SECRET\"/" \
+		/etc/ocserv/ocserv.conf
+	if [ -n "$CAMOUFLAGE_REALM" ]; then
+		REALM=$(printf '%s' "$CAMOUFLAGE_REALM" | tr -d '"\\' | sed -e 's/[/&]/\\&/g')
+		sed -i "s/^#\{0,1\}camouflage_realm = .*/camouflage_realm = \"$REALM\"/" /etc/ocserv/ocserv.conf
+	fi
+	echo "Camouflage enabled, connect with https://<server>/?<CAMOUFLAGE_SECRET>"
+else
+	sed -i 's/^camouflage = .*/camouflage = false/' /etc/ocserv/ocserv.conf
 fi
 
 # Open ipv4 ip forward

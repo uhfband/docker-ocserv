@@ -18,3 +18,7 @@ services:
       - SRV_CN=www.example.com
       - SRV_ORG=My Company
       - SRV_DAYS=9999
+      - VPN_USER=alice
+      - VPN_PASSWORD=changeme
+      # Optional: uncomment to hide the VPN behind https://<server>/?mysecret
+      # - CAMOUFLAGE_SECRET=mysecret
